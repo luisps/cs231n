@@ -95,14 +95,34 @@ class TwoLayerNet(object):
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################           
-    scores -= np.max(scores, axis=1, keepdims=True)  # shift values to avoid numerical instabilities
-                     
+    #scores -= np.max(scores, axis=1, keepdims=True)  # shift values to avoid numerical instabilities
+    
+    """
+    #might still be subjected to numerical problems
     exp_scores = np.exp(scores)
     norm_scores = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
     correct_class_score = norm_scores[np.arange(N), y]
     loss = np.sum(-np.log(correct_class_score))
-
-    loss /= N
+    """
+    """
+    Z = np.sum(np.exp(scores), axis=1, keepdims=True)
+    log_probs = scores - np.log(Z)
+    probs = np.exp(log_probs)
+    loss = -np.sum(log_probs[np.arange(N), y]) / N
+    """
+    
+    x = scores
+    shifted_logits = x - np.max(x, axis=1, keepdims=True)
+    Z = np.sum(np.exp(shifted_logits), axis=1, keepdims=True)
+    log_probs = shifted_logits - np.log(Z)
+    probs = np.exp(log_probs)
+    N = x.shape[0]
+    loss = -np.sum(log_probs[np.arange(N), y]) / N
+    dx = probs.copy()
+    dx[np.arange(N), y] -= 1
+    dx /= N
+    dscores = dx
+    
     loss += reg * np.sum(W1 * W1)
     loss += reg * np.sum(W2 * W2)
     #############################################################################
@@ -116,9 +136,11 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    dscores = norm_scores
+    """
+    dscores = probs
     dscores[np.arange(N), y] -= 1
     dscores /= N
+    """
     
     dW2 = np.dot(a1.T, dscores)
     db2 = np.sum(dscores, axis=0)
