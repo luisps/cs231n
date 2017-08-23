@@ -261,6 +261,7 @@ class FullyConnectedNet(object):
         affine_caches = []
         batchnorm_caches = []
         relu_caches = []
+        dropout_caches = []
         
         a = X
         for i in range(self.num_layers-1):
@@ -276,6 +277,9 @@ class FullyConnectedNet(object):
                 
             a, cache = relu_forward(z)
             relu_caches.append(cache)
+            if self.use_dropout:
+                a, cache = dropout_forward(a, self.dropout_param)
+                dropout_caches.append(cache)
             
         #last affine layer before softmax
         layer = str(self.num_layers)
@@ -317,6 +321,9 @@ class FullyConnectedNet(object):
         for i in reversed(range(self.num_layers-1)):
             layer = str(i+1)
             
+            if self.use_dropout:
+                da = dropout_backward(da, dropout_caches[i])
+                
             dz = relu_backward(da, relu_caches[i])
             if self.use_batchnorm:
                 dz, grads['gamma' + layer], grads['beta' + layer] = batchnorm_backward(dz, batchnorm_caches[i])
