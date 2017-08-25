@@ -502,7 +502,26 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
-    pass
+    stride = pool_param['stride']
+    pool_height, pool_width = pool_param['pool_height'], pool_param['pool_width']
+    N, C = x.shape[0], x.shape[1]
+    H, W = x.shape[2], x.shape[3]
+    
+    H_out = 1 + int((H - pool_height) / stride)
+    W_out = 1 + int((W - pool_width) / stride)
+    out = np.zeros((N, C, H_out, W_out))
+    
+    #outer loops for data points and num of channels
+    for n in range(N):
+        for c in range(C):
+            #inner loops for max pool operation
+            for i in range(H_out):
+                for j in range(W_out):
+                    start_H, start_W = i*stride, j*stride
+                    end_H, end_W = start_H+pool_height, start_W+pool_width
+                    
+                    out[n, c, i, j] = np.max(x[n, c, start_H:end_H, start_W:end_W])
+                    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -525,7 +544,29 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the max pooling backward pass                           #
     ###########################################################################
-    pass
+    x, pool_param = cache
+    
+    stride = pool_param['stride']
+    pool_height, pool_width = pool_param['pool_height'], pool_param['pool_width']
+    N, C = x.shape[0], x.shape[1]
+    H, W = x.shape[2], x.shape[3]
+    
+    dx = np.zeros(x.shape)
+    
+    #outer loops for data points and num of channels
+    for n in range(N):
+        for c in range(C):
+            #inner loops for max pool operation
+            for i in range(dout.shape[2]):
+                for j in range(dout.shape[3]):
+                    start_H, start_W = i*stride, j*stride
+                    end_H, end_W = start_H+pool_height, start_W+pool_width
+
+                    p = x[n, c, start_H:end_H, start_W:end_W]
+                    dp = np.where(p==p.max(), dout[n, c, i, j], 0.0)
+                    
+                    dx[n, c, start_H:end_H, start_W:end_W] += dp
+                    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
