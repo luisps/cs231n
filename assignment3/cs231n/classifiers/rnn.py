@@ -137,7 +137,30 @@ class CaptioningRNN(object):
         # defined above to store loss and gradients; grads[k] should give the      #
         # gradients for self.params[k].                                            #
         ############################################################################
-        pass
+        #step 1
+        h0, proj_cache = affine_forward(features, W_proj, b_proj)
+        #step 2
+        word_vecs, embed_cache = word_embedding_forward(captions_in, W_embed)
+        #step 3
+        h, rnn_cache = rnn_forward(word_vecs, h0, Wx, Wh, b)
+        #step 4
+        scores, taffine_cache = temporal_affine_forward(h, W_vocab, b_vocab)
+        #step 5 (forward and backward pass)
+        loss, dscores = temporal_softmax_loss(scores, captions_out, mask)
+        
+        #step 4
+        dh, dW_vocab, db_vocab = temporal_affine_backward(dscores, taffine_cache)
+        #step 3
+        dword_vecs, dh0, dWx, dWh, db = rnn_backward(dh, rnn_cache)
+        #step 2
+        dW_embed = word_embedding_backward(dword_vecs, embed_cache)
+        #step 1
+        dfeatures, dW_proj, db_proj = affine_backward(dh0, proj_cache)
+        
+        grads['W_vocab'], grads['b_vocab'] = dW_vocab, db_vocab
+        grads['Wx'], grads['Wh'], grads['b'] = dWx, dWh, db
+        grads['W_embed'] = dW_embed
+        grads['W_proj'], grads['b_proj'] = dW_proj, db_proj
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -199,7 +222,25 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
-        pass
+        h0, _ = affine_forward(features, W_proj, b_proj)
+        
+        #write start token to last column with broadcast to that first iteration
+        #works, on last iteration the start token will be (possibly) overwritten
+        #by the correct tokens
+        captions[:, -1] = self._start
+        prev_h = h0
+        
+        for t in range(max_length):
+            #step 1
+            word_vecs = W_embed[captions[:, t-1], :]
+            #step 2
+            curr_h, _ = rnn_step_forward(word_vecs, prev_h, Wx, Wh, b)
+            #step 3
+            probs, _ = affine_forward(curr_h, W_vocab, b_vocab)
+            #step 4
+            captions[:, t] = np.argmax(probs, axis=1)
+            prev_h = curr_h
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
